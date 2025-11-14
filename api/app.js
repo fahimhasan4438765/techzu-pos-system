@@ -93,6 +93,27 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+// Root route handler
+app.get('/', (req, res) => {
+  res.json({
+    name: 'TechzuPOS API',
+    version: '1.0.0',
+    description: 'REST API for TechzuPOS system',
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products',
+      orders: '/api/orders',
+      sync: '/api/sync',
+      health: '/health'
+    }
+  });
+});
+
+// Favicon handler
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 // API documentation endpoint (placeholder)
 app.get('/api', (req, res) => {
   res.json({
