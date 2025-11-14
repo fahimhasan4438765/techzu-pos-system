@@ -1,7 +1,5 @@
 {
-  "buildCommand": "cd web && npm install && npm run build",
-  "devCommand": "cd web && npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": "web/.next"
+  "installCommand": "npm install --workspaces=false && cd api && npm install",
+  "buildCommand": "cd api && npm run build",
+  "startCommand": "cd api && npm start"
 }

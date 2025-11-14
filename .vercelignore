@@ -1,0 +1,10 @@
+pos/
+pos/**
+web/
+web/**
+node_modules/
+.git/
+.expo/
+*.log
+.env.local
+.env.*.local
