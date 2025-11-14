@@ -3,6 +3,8 @@ pos/**
 web/
 web/**
 node_modules/
+!api/node_modules/@prisma/
+!api/node_modules/.prisma/
 .git/
 .expo/
 *.log

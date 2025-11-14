@@ -16,6 +16,6 @@
       "dest": "api/index.js"
     }
   ],
-  "installCommand": "npm install --workspaces=false && cd api && npm install",
-  "buildCommand": "cd api && npm run build"
+  "installCommand": "cd api && npm install",
+  "buildCommand": "cd api && npx prisma generate"
 }

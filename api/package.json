@@ -8,6 +8,7 @@
     "dev": "nodemon ./bin/www",
     "start": "node ./bin/www",
     "build": "prisma generate",
+    "postinstall": "prisma generate",
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "clean": "rm -rf node_modules",
