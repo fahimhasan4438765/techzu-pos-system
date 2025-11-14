@@ -1,0 +1,94 @@
+# Alternative Dockerfile for TechzuPOS - Node.js 20 + Stable pnpm
+# This version uses Node.js 20 (required for Next.js 16) and pre-installs pnpm
+# Using regular Linux instead of Alpine to avoid native binary issues with LightningCSS
+
+FROM node:20-slim AS base
+
+# Update packages and install basic tools including Python for native builds
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV CI=1
+ENV HUSKY=0
+ENV PNPM_CONFIG_STORE_DIR=/root/.pnpm-store
+
+# Install pnpm using npm (most reliable method)
+RUN npm install -g pnpm@8.15.0 --registry https://registry.npmjs.org/
+
+# Verify pnpm installation
+RUN pnpm --version
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package.json pnpm-workspace.yaml turbo.json ./
+
+# Copy workspace package.json files
+COPY api/package.json ./api/
+COPY web/package.json ./web/  
+COPY pos/package.json ./pos/
+
+# Copy lockfile if exists
+COPY pnpm-lock.yaml* ./
+
+# Configure pnpm and install dependencies
+RUN pnpm config set registry https://registry.npmjs.org/ && \
+    pnpm config set store-dir /root/.pnpm-store && \
+    pnpm install --frozen-lockfile --prefer-offline --no-optional
+
+# Development stage
+FROM base AS development
+
+# Copy all source code
+COPY . .
+
+# Expose all necessary ports
+EXPOSE 3000 3001 8081 19000 19001 19002
+
+# Set development environment
+ENV NODE_ENV=development
+ENV EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S techzu -u 1001 -G nodejs
+
+# Set proper ownership
+RUN chown -R techzu:nodejs /app
+USER techzu
+
+# Default command - runs Turborepo TUI
+CMD ["pnpm", "run", "dev"]
+
+# Production stage
+FROM base AS production
+
+# Copy source code
+COPY . .
+
+# Build applications
+RUN pnpm run build
+
+# Expose production ports
+EXPOSE 3000 3001
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S techzu -u 1001 -G nodejs && \
+    chown -R techzu:nodejs /app
+
+USER techzu
+
+# Production command
+CMD ["pnpm", "run", "start"]

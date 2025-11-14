@@ -1,0 +1,101 @@
+# TechzuPOS Dockerfile - Optimized for Native Dependencies
+# This version specifically addresses LightningCSS and Tailwind CSS 4 native binary issues
+
+FROM node:20-bullseye-slim AS base
+
+# Install system dependencies required for native Node.js modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV CI=1
+ENV HUSKY=0
+ENV PNPM_CONFIG_STORE_DIR=/root/.pnpm-store
+ENV NODE_ENV=development
+
+# Install pnpm globally
+RUN npm install -g pnpm@8.15.0
+
+# Verify installations
+RUN node --version && npm --version && pnpm --version
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package.json pnpm-workspace.yaml turbo.json ./
+COPY api/package.json ./api/
+COPY web/package.json ./web/
+COPY pos/package.json ./pos/
+COPY pnpm-lock.yaml* ./
+
+# Configure pnpm and install dependencies
+RUN pnpm config set registry https://registry.npmjs.org/ && \
+    pnpm config set store-dir /root/.pnpm-store && \
+    pnpm install --frozen-lockfile
+
+# Development stage
+FROM base AS development
+
+# Copy source code
+COPY . .
+
+# Rebuild native modules to ensure compatibility
+RUN pnpm rebuild
+
+# Expose ports
+EXPOSE 3000 3001 8081 19000 19001 19002
+
+# Set development environment
+ENV NODE_ENV=development
+ENV EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+# Create non-root user with home directory
+RUN groupadd -r nodejs && useradd -r -g nodejs -m techzu
+RUN chown -R techzu:nodejs /app
+
+# Create necessary directories for Expo CLI with proper permissions
+RUN mkdir -p /home/techzu/.expo && \
+    mkdir -p /home/techzu/.npm && \
+    mkdir -p /home/techzu/.pnpm && \
+    chown -R techzu:nodejs /home/techzu
+
+USER techzu
+
+# Start with Turborepo TUI
+CMD ["pnpm", "run", "dev"]
+
+# Production stage
+FROM base AS production
+
+# Copy source code and build
+COPY . .
+RUN pnpm run build
+
+# Create non-root user with home directory and set ownership
+RUN groupadd -r nodejs && useradd -r -g nodejs -m techzu
+RUN chown -R techzu:nodejs /app
+
+# Create necessary directories for Expo CLI with proper permissions
+RUN mkdir -p /home/techzu/.expo && \
+    mkdir -p /home/techzu/.npm && \
+    mkdir -p /home/techzu/.pnpm && \
+    chown -R techzu:nodejs /home/techzu
+
+USER techzu
+
+# Expose production ports
+EXPOSE 3000 3001
+
+# Start production services
+CMD ["pnpm", "run", "start"]

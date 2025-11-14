@@ -1,0 +1,70 @@
+services:
+  techzu-pos:
+    build:
+      context: .
+      dockerfile: Dockerfile.native
+      target: development
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    container_name: techzu-pos-dev
+    ports:
+      # API Server
+      - "3001:3001"
+      # Web Admin Panel  
+      - "3000:3000"
+      # Expo DevTools
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001" 
+      - "19002:19002"
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      # Exclude node_modules from host mount (use container's)
+      - /app/node_modules
+      - /app/api/node_modules
+      - /app/web/node_modules
+      - /app/pos/node_modules
+    env_file:
+      - .env.docker
+      - ./api/.env.docker
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - TURBO_TELEMETRY_DISABLED=1
+      - NEXT_TELEMETRY_DISABLED=1
+      # Help with native modules
+      - npm_config_target_platform=linux
+      - npm_config_target_arch=x64
+      - npm_config_cache=/tmp/.npm
+    stdin_open: true
+    tty: true
+    depends_on:
+      - postgres
+    networks:
+      - techzu-network
+
+  # Optional: PostgreSQL database for future use
+  postgres:
+    image: postgres:14-alpine
+    container_name: techzu-pos-db
+    environment:
+      POSTGRES_DB: techzu_pos
+      POSTGRES_USER: techzu_user
+      POSTGRES_PASSWORD: techzu_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - techzu-network
+
+networks:
+  techzu-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

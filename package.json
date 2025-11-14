@@ -1,0 +1,48 @@
+{
+  "name": "techzu-pos",
+  "version": "1.0.0",
+  "description": "POS Mini-System - Complete Point of Sale solution with Admin Panel, Mobile POS, and REST API",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web", 
+    "pos"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "docker:dev": "docker-compose up --build",
+    "docker:rebuild": "docker-compose build --no-cache",
+    "docker:stop": "docker-compose down",
+    "db:setup": "cd api && pnpm prisma db push && pnpm db:seed",
+    "db:reset": "cd api && pnpm prisma db push --force-reset && pnpm db:seed",
+    "db:studio": "cd api && pnpm prisma studio",
+    "db:migrate": "cd api && pnpm prisma migrate dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "prettier": "^3.1.0",
+    "eslint": "^8.55.0"
+  },
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "keywords": [
+    "pos",
+    "point-of-sale",
+    "monorepo", 
+    "react",
+    "react-native",
+    "express",
+    "nodejs",
+    "postgresql"
+  ],
+  "author": "TechzuPOS Team",
+  "license": "MIT"
+}

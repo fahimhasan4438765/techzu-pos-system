@@ -1,0 +1,28 @@
+# docker-compose.fast.yml - Optimized for development speed
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.fast.yml up
+
+services:
+  techzu-pos:
+    build:
+      dockerfile: Dockerfile.stable
+      target: development
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+      cache_from:
+        - techzupos-techzu-pos:latest
+    environment:
+      # Optimize for development speed
+      - TURBO_TELEMETRY_DISABLED=1
+      - NEXT_TELEMETRY_DISABLED=1
+      - DISABLE_ESLINT_PLUGIN=true
+    volumes:
+      # More specific volume mounts for better performance
+      - .:/app:cached
+      - /app/node_modules
+      - /app/api/node_modules
+      - /app/web/node_modules
+      - /app/pos/node_modules
+      - /app/.next
+      - /app/.expo
+    stdin_open: true
+    tty: true

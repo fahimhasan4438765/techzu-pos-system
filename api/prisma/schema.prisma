@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(CASHIER)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  
+  // Relations
+  orders Order[]
+  
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  sku         String   @unique
+  name        String
+  priceCents  Int      @map("price_cents")
+  category    String
+  taxRate     Decimal  @map("tax_rate") @db.Decimal(5, 2)
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  
+  // Relations
+  orderItems OrderItem[]
+  
+  @@map("products")
+}
+
+model Order {
+  id              String        @id @default(uuid()) @db.Uuid
+  cashierId       String        @map("cashier_id") @db.Uuid
+  paymentMethod   PaymentMethod @map("payment_method")
+  subtotalCents   Int           @map("subtotal_cents")
+  taxCents        Int           @map("tax_cents")
+  totalCents      Int           @map("total_cents")
+  status          OrderStatus   @default(COMPLETED)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  
+  // Relations
+  cashier    User        @relation(fields: [cashierId], references: [id])
+  orderItems OrderItem[]
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  orderId        String  @map("order_id") @db.Uuid
+  productId      String  @map("product_id") @db.Uuid
+  qty            Int
+  unitPriceCents Int     @map("unit_price_cents")
+  taxRate        Decimal @map("tax_rate") @db.Decimal(5, 2)
+  lineTotalCents Int     @map("line_total_cents")
+  
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  
+  @@map("order_items")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  CASHIER
+  
+  @@map("user_role")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  QR
+  
+  @@map("payment_method")
+}
+
+enum OrderStatus {
+  COMPLETED
+  VOID
+  
+  @@map("order_status")
+}

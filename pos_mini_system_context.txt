@@ -1,0 +1,190 @@
+
+POS Mini-System - Monorepo Context
+
+Monorepo Structure:
+- /api  → Express.js REST API (modular, clean architecture with Swagger documentation)
+- /web  → React.js Admin Panel (backoffice)
+- /pos  → React Native App (mobile POS)
+
+Root Command:
+Running `pnpm run dev` from the root should:
+1. Start the Expo app (React Native POS) in one terminal.
+2. Start the Next.js (React) web admin panel on port 3000 in another terminal.
+3. Start the Express.js API on port 3001 in another terminal.
+Logs should appear separately, and navigation between terminal panes should be possible using the up/down arrow keys.
+
+---
+
+Objective:
+Build a minimal POS system with:
+- Admin Panel (React) to manage products and view orders.
+- Mobile POS (React Native) for order-taking & checkout.
+- REST API (Node/Express) with PostgreSQL.
+(Bonus) Offline-first capability for POS app.
+
+Target Effort: 12–16 hours (individual work).
+
+---
+
+Core Features
+
+1. Admin Panel (React):
+- Login (email/password, JWT-based authentication).
+- Products CRUD:
+  Fields: name, SKU, price, category, taxRate, image (optional URL).
+- Orders list (read-only): id, createdAt, paymentMethod, total, status.
+
+2. Mobile POS (React Native):
+- Product catalog (grouped by category) → add to cart.
+- Cart operations: increment/decrement qty, remove item, show subtotal, tax, total.
+- Checkout:
+  Payment methods: Cash, Card (mock), QR (mock).
+  On complete sale → create order & order_items.
+- Order history (last 20 orders) with totals and status.
+(Bonus - Offline):
+  - Usable without network: browse cached products, create orders.
+  - Queue unsynced orders and auto-sync when online.
+
+3. API (Express + PostgreSQL):
+- Auth endpoints: register/login (JWT).
+- Product endpoints: list, CRUD (admin only).
+- Orders endpoints: create, list, detail.
+(Bonus - Sync): bulk “push unsynced orders” endpoint.
+
+---
+
+Data Models:
+
+users
+- id (uuid, PK)
+- email (text, unique)
+- password_hash (text)
+- role (text: 'admin' | 'cashier')
+- created_at (timestamptz)
+
+products
+- id (uuid, PK)
+- sku (text, unique)
+- name (text)
+- price_cents (int)
+- category (text)
+- tax_rate (numeric(5,2))
+- image_url (text, nullable)
+- created_at (timestamptz)
+- updated_at (timestamptz)
+
+orders
+- id (uuid, PK)
+- cashier_id (uuid FK → users)
+- payment_method (text: 'cash' | 'card' | 'qr')
+- subtotal_cents (int)
+- tax_cents (int)
+- total_cents (int)
+- status (text: 'completed' | 'void')
+- created_at (timestamptz)
+
+order_items
+- id (uuid, PK)
+- order_id (uuid FK → orders)
+- product_id (uuid FK → products)
+- qty (int)
+- unit_price_cents (int)
+- tax_rate (numeric(5,2))
+- line_total_cents (int)
+
+---
+
+API Contract Examples:
+
+POST /auth/register
+{ email, password } → 201 Created
+
+POST /auth/login
+{ email, password } → 200 OK { token }
+
+GET /products
+(public for POS) → 200 OK [{...}]
+
+POST /products
+(admin only) → 201 Created
+
+PATCH /products/:id
+(admin only) → 200 OK
+
+GET /orders?limit=50
+(admin only) → 200 OK
+
+GET /orders/:id
+(admin only) → 200 OK
+
+POST /orders
+{
+  "paymentMethod": "cash",
+  "items": [{ "productId": "...", "qty": 2 }],
+  "clientCreatedAt": "2025-10-01T10:21:00Z"
+}
+→ 201 Created { orderId, totals }
+
+POST /sync/orders
+{
+  "orders": [
+    { "tempId": "local-123", "payload": { ...same as /orders } }
+  ]
+}
+→ 200 OK {
+  "results": [
+    { "tempId": "local-123", "orderId": "...", "status": "ok" }
+  ]
+}
+
+---
+
+Offline Design (Bonus):
+
+Admin Panel:
+- Not required offline (must be online).
+
+Mobile POS:
+- Storage: SQLite or AsyncStorage for products cache, pendingOrders queue, order history.
+- Startup Sync Flow:
+  - If online: fetch products, cache locally, push pending orders.
+  - If offline: use cached data, show “Offline” badge.
+- Order Creation Offline:
+  - Write pending orders with a temporary local ID (tempId).
+  - Show in local history as “Pending”.
+- Reconnect Listener:
+  - On reconnection, sync pending orders to the server, update statuses.
+- Conflict Policy:
+  - Server is the source of truth.
+  - If product inactive, skip those lines but continue posting valid items.
+
+---
+
+Tech & Tooling:
+- Backend: Node.js, Express.js, PostgreSQL 14+.
+- Web: React.js (Vite or Next.js).
+- Mobile: React Native (Expo).
+- Package Manager: pnpm (monorepo setup).
+- Swagger for API documentation.
+- Elegant Apple-style color theme (clean, minimalist, high contrast).
+
+---
+
+Acceptance Criteria:
+- Products CRUD works in Admin Panel (auth required).
+- POS app can list products, manage cart, compute totals, and complete checkout.
+- API performs robust totals calculations (subtotal, tax, total).
+- Proper validation and error handling (422 on invalid input).
+- Seed script with ~12 products across 3 categories.
+- README with setup/run instructions.
+- Optional: Docker Compose, hosted web app, and APK.
+- Optional: Loom demo video.
+
+---
+
+Root Development Behavior:
+- `pnpm run dev` at root → concurrently runs:
+  - API on port 3001
+  - Web on port 3000
+  - Expo for POS app
+- Logs appear in separate terminal windows (navigable via arrow keys).
