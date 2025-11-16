@@ -1,0 +1,10 @@
+api/
+web/
+documents/
+scripts/
+resources/
+*.md
+.env
+.env.*
+.git/
+.vscode/
